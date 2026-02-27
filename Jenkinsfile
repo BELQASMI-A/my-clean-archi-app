@@ -8,8 +8,8 @@ pipeline {
 
     environment {
         MAVEN_OPTS = "-Dmaven.test.failure.ignore=false"
-        // Nom du dépôt GitHub (À ADAPTER)
-        GITHUB_REPO = "github.com/abelqasm/my-java-app.git"
+        // Nom du dépôt GitHub (ADAPTÉ)
+        GITHUB_REPO = "github.com/BELQASMI-A/my-clean-archi-app.git"
     }
 
     stages {
@@ -55,7 +55,7 @@ pipeline {
 
         stage('Tag & Push GitHub') {
             when {
-                branch 'master' // Ne tagge que si on est sur la branche master
+                branch 'main' // Ne tagge que si on est sur la branche main
             }
             steps {
                 // Utilise le credentialsId 'github-creds' que vous venez de créer
