@@ -2,35 +2,31 @@ pipeline {
     agent any
 
     tools {
-        // Assurez-vous que 'maven-3' est configuré dans les outils globaux de Jenkins
         maven 'maven-3'
         jdk 'jdk-21'
     }
 
     environment {
-        // Désactive les logs abusifs de Maven
         MAVEN_OPTS = "-Dmaven.test.failure.ignore=false"
+        // Nom du dépôt GitHub (À ADAPTER)
+        GITHUB_REPO = "github.com/abelqasm/my-java-app.git"
     }
 
     stages {
         stage('Nettoyage & Préparation') {
             steps {
-                echo 'Nettoyage du répertoire de travail...'
                 bat 'mvn clean'
             }
         }
 
         stage('Compilation') {
             steps {
-                echo 'Compilation du projet Clean Architecture...'
                 bat 'mvn compile'
             }
         }
 
         stage('Tests Unitaires (Isolation)') {
             steps {
-                echo 'Exécution des tests unitaires du Domaine et des Adapteurs...'
-                // On lance les tests qui ne nécessitent pas de contexte Spring complet
                 bat 'mvn test -Dtest=CreateUserUseCaseTest,AdminScriptingTest'
             }
             post {
@@ -42,7 +38,6 @@ pipeline {
 
         stage('Tests d\'Intégration (Spring Boot & DB)') {
             steps {
-                echo 'Exécution des tests d\'intégration (API Web & Persistance H2)...'
                 bat 'mvn test -Dtest=UserRestControllerTest,SpringDataUserRepositoryTest'
             }
             post {
@@ -54,21 +49,34 @@ pipeline {
 
         stage('Packaging') {
             steps {
-                echo 'Création de l\'artéfact exécutable (Fat JAR)...'
                 bat 'mvn package -DskipTests'
             }
-            post {
-                success {
-                    echo 'Build terminé avec succès !'
-                    archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+        }
+
+        stage('Tag & Push GitHub') {
+            when {
+                branch 'master' // Ne tagge que si on est sur la branche master
+            }
+            steps {
+                // Utilise le credentialsId 'github-creds' que vous venez de créer
+                withCredentials([usernamePassword(credentialsId: 'github-creds', passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
+                    echo "Tagging de la version stable build-${env.BUILD_NUMBER}..."
+                    bat """
+                        git tag -a build-${env.BUILD_NUMBER} -m "Build réussi par Jenkins"
+                        git push https://%GIT_USERNAME%:%GIT_PASSWORD%@${env.GITHUB_REPO} build-${env.BUILD_NUMBER}
+                    """
                 }
             }
         }
     }
 
     post {
+        success {
+            echo 'Build et Push terminés avec succès !'
+            archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+        }
         failure {
-            echo 'Le pipeline a échoué. Vérifiez les rapports de tests.'
+            echo 'Le pipeline a échoué. Aucune version ne sera taggée sur GitHub.'
         }
     }
 }
