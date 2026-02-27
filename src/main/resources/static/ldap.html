@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html ng-app="LdapApp">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Gargantua | Configuration LDAP</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+    <style>
+        :root {
+            --primary: #4ecca3;
+            --bg: #1a1a2e;
+            --surface: #16213e;
+            --text: #ffffff;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            padding: 40px;
+        }
+
+        .form-card {
+            max-width: 600px;
+            margin: auto;
+            background: var(--surface);
+            padding: 30px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            background: #0f3460;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            color: white;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+            outline: none;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .btn-test {
+            background: transparent;
+            border: 1px solid var(--primary);
+            color: var(--primary);
+        }
+
+        .btn-sync {
+            background: var(--primary);
+            color: var(--bg);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            opacity: 0.9;
+        }
+
+        .status-msg {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .success {
+            background: rgba(78, 204, 163, 0.1);
+            color: var(--primary);
+        }
+
+        .error {
+            background: rgba(231, 76, 60, 0.1);
+            color: #e74c3c;
+        }
+    </style>
+</head>
+
+<body ng-controller="LdapCtrl">
+
+    <div class="form-card">
+        <a href="index.html" style="color: #7f8c8d; text-decoration: none;">← Retour</a>
+        <h1 style="margin-top: 15px;">Configuration Annuaire LDAP</h1>
+        <p style="color: #7f8c8d; margin-bottom: 30px;">Identifiez votre source d'utilisateurs externe pour la
+            synchronisation.</p>
+
+        <div class="form-group">
+            <label>URL du Serveur (ex: ldap://localhost)</label>
+            <input type="text" ng-model="config.url">
+        </div>
+        <div class="form-group">
+            <label>Port (défaut: 389)</label>
+            <input type="number" ng-model="config.port">
+        </div>
+        <div class="form-group">
+            <label>Base DN (ex: dc=siatel,dc=com)</label>
+            <input type="text" ng-model="config.baseDn">
+        </div>
+        <div class="form-group">
+            <label>Manager DN (Login)</label>
+            <input type="text" ng-model="config.managerDn">
+        </div>
+        <div class="form-group">
+            <label>Mot de passe</label>
+            <input type="password" ng-model="config.password">
+        </div>
+        <div class="form-group">
+            <label>Filtre Utilisateurs (ex: (accountStatus=actif))</label>
+            <input type="text" ng-model="config.userFilter">
+        </div>
+
+        <div class="status-msg" ng-if="status" ng-class="{'success': isSuccess, 'error': !isSuccess}">
+            {{ status }}
+        </div>
+
+        <div class="btn-group">
+            <button class="btn btn-test" ng-click="testConnection()">TESTER LA CONNEXION</button>
+            <button class="btn btn-sync" ng-click="syncConnection()">SYNCHRONISER</button>
+        </div>
+    </div>
+
+    <script>
+        var app = angular.module('LdapApp', []);
+        app.controller('LdapCtrl', function ($scope, $http) {
+            $scope.config = {
+                url: 'ldap://urd.ucp',
+                port: 389,
+                baseDn: 'dc=u-cergy,dc=fr',
+                managerDn: 'uid=gargantua-prod,ou=system,dc=u-cergy,dc=fr',
+                password: 'sJG<N-6]$v#WzFcgg"',
+                userFilter: '(accountStatus=actif)'
+            };
+            $scope.status = null;
+
+            $scope.testConnection = function () {
+                $scope.status = "Vérification en cours...";
+                $http.post('/api/ldap/test', $scope.config).then(function (res) {
+                    $scope.isSuccess = res.data.success;
+                    $scope.status = res.data.message;
+                }, function () {
+                    $scope.isSuccess = false;
+                    $scope.status = "Erreur de communication avec le serveur Java.";
+                });
+            };
+
+            $scope.syncConnection = function () {
+                $scope.status = "Synchronisation en cours...";
+                $http.post('/api/ldap/sync', $scope.config).then(function (res) {
+                    $scope.isSuccess = res.data.success;
+                    $scope.status = res.data.message;
+                }, function () {
+                    $scope.isSuccess = false;
+                    $scope.status = "Erreur lors de l'appel de synchronisation.";
+                });
+            };
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html ng-app="ConsoleApp">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Gargantua IDE | Scripting Environment</title>
+    <!-- Frameworks -->
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.23.4/ace.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@400;600&display=swap"
+        rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-darker: #0d1117;
+            --bg-dark: #161b22;
+            --accent: #4ecca3;
+            --border: #30363d;
+            --text-main: #c9d1d9;
+            --text-dim: #8b949e;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-darker);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Top Header */
+        header {
+            height: 45px;
+            background: var(--bg-dark);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 100;
+        }
+
+        .logo {
+            font-weight: 600;
+            color: var(--accent);
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn-run {
+            background: var(--accent);
+            color: var(--bg-darker);
+            border: none;
+            padding: 5px 15px;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: 0.2s;
+        }
+
+        .btn-run:hover {
+            filter: brightness(1.1);
+            transform: scale(1.02);
+        }
+
+        .btn-run:disabled {
+            background: #2d333b;
+            color: #484f58;
+            cursor: not-allowed;
+        }
+
+        /* Layout Main */
+        .main-layout {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        aside {
+            width: 240px;
+            background: var(--bg-dark);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-title {
+            padding: 15px;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            letter-spacing: 1px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sidebar-item {
+            padding: 10px 15px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sidebar-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .sidebar-item.active {
+            background: rgba(78, 204, 163, 0.1);
+            color: var(--accent);
+            border-left: 2px solid var(--accent);
+        }
+
+        /* Editor Area */
+        .workspace {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        #editor {
+            flex: 1;
+            font-size: 14px;
+            font-family: 'Fira Code', monospace;
+        }
+
+        /* Terminal Footer */
+        .terminal {
+            height: 250px;
+            background: #000;
+            border-top: 2px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .terminal-header {
+            background: #161b22;
+            padding: 5px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+        }
+
+        .terminal-content {
+            flex: 1;
+            padding: 10px 15px;
+            overflow-y: auto;
+            color: #00ff00;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            line-height: 1.4;
+            white-space: pre-wrap;
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        .loading-indicator {
+            color: var(--accent);
+            animation: pulse 1.5s infinite;
+        }
+
+        .tab-bar {
+            height: 35px;
+            background: var(--bg-darker);
+            display: flex;
+            align-items: center;
+        }
+
+        .tab {
+            padding: 0 15px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            background: var(--bg-dark);
+            border-right: 1px solid var(--border);
+            border-top: 1px solid var(--accent);
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+
+<body ng-controller="IdeCtrl">
+
+    <header>
+        <div class="logo">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+            </svg>
+            GARGANTUA IDE
+        </div>
+        <div class="actions">
+            <a href="index.html"
+                style="color: var(--text-dim); text-decoration: none; font-size: 0.9rem; margin-top: 5px;">Dashboard</a>
+            <button class="btn-run" ng-click="runScript()" ng-disabled="executing">
+                <span ng-if="!executing">▶ RUN SCRIPT</span>
+                <span ng-if="executing" class="loading-indicator">EXECUTING...</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="main-layout">
+        <aside>
+            <div class="sidebar-title">Project Explorer</div>
+            <div class="sidebar-item active">
+                📜 main.js
+            </div>
+            <div class="sidebar-item">
+                📁 modules
+            </div>
+            <div style="flex: 1"></div>
+            <div class="sidebar-item"
+                style="border-top: 1px solid var(--border); font-size: 0.8rem; color: var(--accent)">
+                ● Admin API Connected
+            </div>
+        </aside>
+
+        <div class="workspace">
+            <div class="tab-bar">
+                <div class="tab">main.js</div>
+            </div>
+            <div id="editor"></div>
+        </div>
+    </div>
+
+    <div class="terminal">
+        <div class="terminal-header">
+            <span>TERMINAL / OUTPUT</span>
+            <span style="color: var(--accent)" ng-if="lastExec">Last run: {{ lastExec | date:'HH:mm:ss' }}</span>
+        </div>
+        <div class="terminal-content" id="terminal-content">
+            {{ logs }}
+        </div>
+    </div>
+
+    <script>
+        var app = angular.module('ConsoleApp', []);
+        app.controller('IdeCtrl', function ($scope, $http, $timeout) {
+
+            // Initialize Ace Editor
+            var editor = ace.edit("editor");
+            editor.setTheme("ace/theme/one_dark");
+            editor.session.setMode("ace/mode/javascript");
+            editor.setShowPrintMargin(false);
+
+            var defaultCode = "/**\n * GARGANTUA SCRIPT \n * Use the 'Admin' object to interact with the core.\n */\n\nconsole.log('--- Initializing Script ---');\n\nvar user = Admin.newUser('IDE_1', 'Developer Abel');\nconsole.log('User created in memory: ' + user.getLabel());\n\nAdmin.createUser(user);\n\nconsole.log('Process completed successfully.');";
+            editor.setValue(defaultCode, -1);
+
+            $scope.logs = "System Ready. Connected to Gargantua Core.";
+            $scope.executing = false;
+
+            $scope.runScript = function () {
+                $scope.executing = true;
+                $scope.logs = "Connecting to remote executor...\n";
+                $scope.lastExec = new Date();
+
+                var code = editor.getValue();
+
+                $http.post('/api/script/execute', { code: code })
+                    .then(function (res) {
+                        $scope.logs = res.data.logs;
+                        $scope.executing = false;
+                        // Scroll to bottom of terminal
+                        $timeout(function () {
+                            var term = document.getElementById('terminal-content');
+                            term.scrollTop = term.scrollHeight;
+                        });
+                    }, function (err) {
+                        $scope.logs = "[CRITICAL ERROR] Failed to reach Spring Boot server.\n" +
+                            "Check if port 8081 is open.";
+                        $scope.executing = false;
+                    });
+            };
+        });
+    </script>
+</body>
+
+</html>
