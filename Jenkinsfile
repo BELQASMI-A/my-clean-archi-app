@@ -27,7 +27,8 @@ pipeline {
 
         stage('Tests Unitaires (Isolation)') {
             steps {
-                bat 'mvn test -Dtest=CreateUserUseCaseTest,AdminScriptingTest'
+                echo 'Exécution des tests unitaires (Domaine, Scripting, CLI, Scheduler)...'
+                bat 'mvn test -Dtest=CreateUserUseCaseTest,AdminScriptingTest,CliConsoleAdapterTest,LdapSyncSchedulerTest'
             }
             post {
                 always {
